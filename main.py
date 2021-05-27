@@ -6,7 +6,7 @@ import networkx as nx
 import re
 import operator
 import pickle
-
+import numpy as np
 from itertools import combinations
 
 def get_formula(str):
@@ -22,7 +22,7 @@ def is_clique(b,T):
         for j in range(i + 1, b):
 
             # If any edge is missing
-            if (not T.has_edge([store[i]],[store[j]])):
+            if (not T.has_edge(store[i],store[j])):
                 return False;
 
     return True;
@@ -31,7 +31,10 @@ def is_clique(b,T):
 # Function to find all the sizes
 # of maximal cliques
 store={}
-def maxCliques(i, l,T):
+node_names=[]
+global_maximum=0
+global_stores={}
+def maxClique(i, l,T):
     # Maximal clique size
     max_ = 0;
 
@@ -40,7 +43,7 @@ def maxCliques(i, l,T):
     for j in range(i + 1, n + 1):
 
         # Add the vertex to store
-        store[l] = j;
+        store[l] =node_names[j-1];
 
         # If the graph is not a clique of size k then
         # it cannot be a clique by adding another edge
@@ -49,9 +52,10 @@ def maxCliques(i, l,T):
             max_ = max(max_, l);
 
             # Check if another edge can be added
-            max_ = max(max_, maxCliques(j, l + 1));
+            max_ = max(max_, maxClique(j, l + 1,T));
 
     return max_;
+
 def addEdges(source,str):
     formula=get_formula(str)
     x = re.findall("A[0-9]{6}", formula)
@@ -73,25 +77,65 @@ def load_data(base_dir):
             data_list[filenameWithoutExtension]=json_data
             addEdges(filenameWithoutExtension,json_data)
     print(data_list)
+import random
+
+def BronKerbosch(Graph,P, R=None, X=None):
+    P = set(P)
+    R = set() if R is None else R
+    X = set() if X is None else X
+    if not P and not X:
+        yield R
+    while P:
+        v = P.pop()
+        yield from BronKerbosch(Graph,
+            P=P.intersection(Graph.neighbors(v)), R=R.union([v]), X=X.intersection(Graph.neighbors(v)))
+        X.add(v)
+
+
 def save_graph(filename,obj):
     outfile = open(filename, 'wb')
     pickle.dump(obj, outfile)
     outfile.close()
+
 def load_obj(filename):
     infile = open(filename, 'rb')
     obj = pickle.load(infile)
     infile.close()
     return obj
 # Press the green button in the gutter to run the script.
-G = nx.Graph()
+train=False
+if train:
+    G = nx.Graph()
+    base_dir = "./sequences/sequences/"
+    load_data(base_dir)
+    save_graph("graph.out",G)
+else:
+    G=load_obj("graph.out")
+#
+# popular_nodes=sorted(dict(G.degree()).items(),reverse=True,key=operator.itemgetter(1))[:100]
+# popular_nodes=[x[0] for x in popular_nodes]
+# T=G.subgraph(popular_nodes)
+# n=T.number_of_nodes()
+# node_names=list(T.nodes)
+# r=maxClique(0,1,T)
 
 
-base_dir = "./sequences/sequences/"
-load_data(base_dir)
-save_graph("graph.out",G)
-popular_nodes=sorted(dict(G.degree()).items(),key=operator.itemgetter(1))
-T=G
-n=G.number_of_nodes()
+######## Normal one
+# n=G.number_of_nodes()
+# node_names=list(G.nodes)
+# r=maxClique(0,1,G)
 
 
+#############
+def getMaximum(sols):
+    maxVal=max(map(len,sols))
+    arg=np.argmax(list(map(len,sols)))
+    print("The maximim solution is ", sols[arg]," with a length of ", maxVal)
+P=list(G.nodes)
+r=list(BronKerbosch(G,P))
+getMaximum(r)
+
+
+
+print(store)
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
